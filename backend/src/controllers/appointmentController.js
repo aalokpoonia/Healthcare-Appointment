@@ -1,0 +1,179 @@
+const Doctor = require('../models/Doctor');
+const User = require('../models/User');
+const Appointment = require('../models/Appointment');
+const { generateDoctorSlots } = require('../services/slotService');
+const { askLLM } = require('../services/llmService');
+const { queueNotification } = require('../services/notificationService');
+const { createCalendarEvent } = require('../services/calendarService');
+
+const searchDoctors = async (req, res, next) => {
+  try {
+    const { specialization } = req.query;
+    const filter = specialization ? { specialization: { $regex: specialization, $options: 'i' } } : {};
+    const doctors = await Doctor.find(filter).populate('userId', 'name email phone');
+    res.json(doctors);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAvailableSlots = async (req, res, next) => {
+  try {
+    const doctorId = req.params.id;
+    const { date } = req.query;
+    const slots = await generateDoctorSlots(doctorId, date);
+    res.json({ date, slots });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createAppointment = async (req, res, next) => {
+  try {
+    const { doctorId, date, slotTime } = req.body;
+    const patientId = req.user._id;
+
+    const doctor = await Doctor.findById(doctorId).populate('userId', 'name email');
+    if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
+
+    const existing = await Appointment.findOne({ doctorId, date, slotTime, status: { $ne: 'cancelled' } });
+    if (existing) {
+      return res.status(409).json({ message: 'This slot has already been booked' });
+    }
+
+    const appointment = await Appointment.findOneAndUpdate(
+      { doctorId, date, slotTime, status: { $ne: 'cancelled' } },
+      {
+        $setOnInsert: {
+          doctorId,
+          patientId,
+          date,
+          slotTime,
+          status: 'booked',
+          holdUntil: new Date(Date.now() + 2 * 60 * 1000),
+        },
+      },
+      { new: true, upsert: true, runValidators: true }
+    );
+
+    if (!appointment || !appointment._id) {
+      return res.status(409).json({ message: 'Slot unavailable; another request booked it first' });
+    }
+
+    const patient = await User.findById(patientId).select('name email');
+    const event = await createCalendarEvent({
+      summary: `Appointment with ${doctor.userId.name}`,
+      description: `Healthcare appointment for ${patient.name}`,
+      startTime: new Date(`${date}T${slotTime}:00Z`).toISOString(),
+      endTime: new Date(new Date(`${date}T${slotTime}:00Z`).getTime() + (doctor.slotDuration || 30) * 60 * 1000).toISOString(),
+      email: patient.email,
+    });
+
+    appointment.googleEventId = event.eventId || '';
+    appointment.calendarSyncStatus = 'synced';
+    await appointment.save();
+
+    await queueNotification({
+      userId: patientId,
+      appointmentId: appointment._id,
+      type: 'booking_confirmation',
+      payload: {
+        email: patient.email,
+        subject: 'Appointment booked successfully',
+        text: `Hi ${patient.name}, your appointment is booked with ${doctor.userId.name} on ${date} at ${slotTime}.`,
+      },
+    });
+
+    res.status(201).json({ appointment });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'Slot already reserved by another patient' });
+    }
+    next(error);
+  }
+};
+
+const holdSlot = async (req, res, next) => {
+  try {
+    const { doctorId, date, slotTime } = req.body;
+    const appointment = await Appointment.findOne({ doctorId, date, slotTime, status: { $ne: 'cancelled' } });
+    if (!appointment) return res.status(404).json({ message: 'Slot not found' });
+
+    appointment.holdUntil = new Date(Date.now() + 2 * 60 * 1000);
+    appointment.status = 'on_hold';
+    await appointment.save();
+
+    res.json({ message: 'Slot held for 2 minutes', holdUntil: appointment.holdUntil });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const submitSymptomForm = async (req, res, next) => {
+  try {
+    const { appointmentId, symptoms } = req.body;
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    const preVisitResult = await askLLM(`Analyse these symptoms and return: urgency level (Low / Medium / High), chief complaint, and three suggested questions for the doctor. Symptoms: ${symptoms}`, 'previsit');
+    appointment.symptomSummary = symptoms;
+    appointment.preVisitSummary = preVisitResult.fallback ? { urgency: 'Medium', chiefComplaint: 'Not available', suggestedQuestions: ['Please review notes manually.'] } : preVisitResult.data;
+    appointment.status = 'confirmed';
+    await appointment.save();
+
+    res.json({ appointment });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPatientAppointments = async (req, res, next) => {
+  try {
+    const appointments = await Appointment.find({ patientId: req.user._id }).sort({ createdAt: -1 });
+    res.json(appointments);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const doctorAppointments = async (req, res, next) => {
+  try {
+    const doctor = await Doctor.findOne({ userId: req.user._id });
+    if (!doctor) return res.status(404).json({ message: 'Doctor profile not found' });
+
+    const appointments = await Appointment.find({ doctorId: doctor._id }).sort({ date: 1, slotTime: 1 });
+    res.json(appointments);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const submitClinicalSummary = async (req, res, next) => {
+  try {
+    const { appointmentId, notes, prescription } = req.body;
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    const summaryResult = await askLLM(`Convert these clinical notes into a patient-friendly summary with medication schedule and follow-up steps: ${notes}`, 'postvisit');
+    appointment.doctorNotes = notes;
+    appointment.prescription = prescription || '';
+    appointment.postVisitSummary = summaryResult.fallback ? 'Summary unavailable — please review notes manually.' : JSON.stringify(summaryResult.data);
+    appointment.status = 'completed';
+    await appointment.save();
+
+    res.json({ appointment });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  searchDoctors,
+  getAvailableSlots,
+  createAppointment,
+  holdSlot,
+  submitSymptomForm,
+  getPatientAppointments,
+  doctorAppointments,
+  submitClinicalSummary,
+};
