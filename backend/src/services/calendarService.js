@@ -15,21 +15,27 @@ function buildCalendarClient() {
 async function createCalendarEvent({ summary, description, startTime, endTime, email }) {
   const calendar = buildCalendarClient();
   if (!calendar) {
-    return { status: 'mock', eventId: `mock-${Date.now()}` };
+    return { status: 'skipped', message: 'Google Calendar not configured', eventId: '' };
   }
 
-  const response = await calendar.events.insert({
-    calendarId: 'primary',
-    requestBody: {
-      summary,
-      description,
-      start: { dateTime: startTime, timeZone: 'UTC' },
-      end: { dateTime: endTime, timeZone: 'UTC' },
-      attendees: email ? [{ email }] : [],
-    },
-  });
+  try {
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: {
+        summary,
+        description,
+        start: { dateTime: startTime, timeZone: 'UTC' },
+        end: { dateTime: endTime, timeZone: 'UTC' },
+        attendees: email ? [{ email }] : [],
+      },
+    });
 
-  return { status: 'synced', eventId: response.data.id };
+    return { status: 'synced', eventId: response.data.id };
+  } catch (error) {
+    const message = error && error.message ? error.message : 'Unknown Google Calendar sync error';
+    console.error('Google Calendar sync failed for appointment:', message);
+    return { status: 'failed', message, eventId: '' };
+  }
 }
 
 async function deleteCalendarEvent(eventId) {

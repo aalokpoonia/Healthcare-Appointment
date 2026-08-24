@@ -12,10 +12,30 @@ function toTimeString(totalMinutes) {
   return `${hours}:${minutes}`;
 }
 
+function toDisplayTime(value) {
+  const [hours, minutes] = String(value).split(':').map(Number);
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
+function getDayName(dateString) {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return '';
+  const date = new Date(`${dateString}T12:00:00`);
+  return date.toLocaleDateString('en-US', { weekday: 'short' });
+}
+
 async function generateDoctorSlots(doctorId, dateString) {
   const doctor = await Doctor.findById(doctorId);
   if (!doctor) {
     throw new Error('Doctor not found');
+  }
+
+  const selectedDay = getDayName(dateString);
+  const availableDays = (doctor.availableDays || []).map((day) => String(day).trim());
+
+  if (selectedDay && availableDays.length > 0 && !availableDays.includes(selectedDay)) {
+    return [];
   }
 
   const startMinutes = parseTimeToMinutes(doctor.workingHours.start);
@@ -31,10 +51,14 @@ async function generateDoctorSlots(doctorId, dateString) {
   for (let t = startMinutes; t + duration <= endMinutes; t += duration) {
     const slotTime = toTimeString(t);
     if ((doctor.leaveDays || []).includes(dateString)) continue;
-    if (!busySet.has(slotTime)) slots.push(slotTime);
+    slots.push({
+      time: slotTime,
+      label: toDisplayTime(slotTime),
+      available: !busySet.has(slotTime),
+    });
   }
 
   return slots;
 }
 
-module.exports = { generateDoctorSlots, parseTimeToMinutes, toTimeString };
+module.exports = { generateDoctorSlots, parseTimeToMinutes, toTimeString, toDisplayTime, getDayName };

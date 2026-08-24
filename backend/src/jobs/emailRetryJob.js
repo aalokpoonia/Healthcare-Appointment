@@ -3,7 +3,7 @@ const Notification = require('../models/Notification');
 const { processNotification } = require('../services/notificationService');
 
 function startEmailRetryJob() {
-  cron.schedule('*/2 * * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     try {
       const notifications = await Notification.find({
         status: 'failed',
@@ -17,7 +17,7 @@ function startEmailRetryJob() {
     } catch (error) {
       console.error('Email retry job error:', error.message);
     }
-  });
+  }, { noOverlap: true });
 
   console.log('Email retry job started');
 }

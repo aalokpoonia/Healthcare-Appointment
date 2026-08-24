@@ -1,162 +1,152 @@
-# Healthcare Appointment & Follow-up Manager
+# Healthcare Appointment Management System
 
-A deployable MVP for a healthcare booking platform built with the MERN stack.
+## About the Project
+This project is a MERN-based healthcare appointment management system designed for role-based patient care and clinic operations. Patients can find doctors, view doctor availability, book appointments, submit pre-visit symptoms, and review consultation summaries. Doctors can manage appointments and consultation records, while admins can manage doctors, patients, and appointment records.
+
+## Features
+- JWT authentication
+- role-based access
+- patient registration/login
+- doctor listing
+- doctor profile
+- doctor availability
+- appointment slot selection
+- appointment booking
+- double-booking prevention
+- appointment cancellation
+- pre-visit symptom submission
+- doctor consultation
+- prescriptions
+- visit summary
+- patient profile
+- doctor dashboard
+- admin dashboard
+- doctor/patient/appointment management
+- optional Google Calendar integration
 
 ## Tech Stack
-- Frontend: React + Vite + Tailwind CSS + React Router + Axios
-- Backend: Node.js + Express
-- Database: MongoDB + Mongoose
-- Auth: JWT with patient/doctor/admin roles
-- LLM: OpenAI API integration with fallback handling
-- Email: Nodemailer + notification queue
-- Calendar: Google Calendar API integration with OAuth-ready service layer
-- Background jobs: node-cron for reminders and email retries
+### Frontend
+- React
+- Vite
+- Tailwind CSS
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JWT
+
+### Additional Technologies
+- Google Calendar API (optional integration)
+- OpenAI API (for symptom and summary processing)
+- Nodemailer
+- node-cron
 
 ## Project Structure
 ```text
 Healthcare Appointment/
-  backend/
-    src/
-      models/
-      routes/
-      controllers/
-      middleware/
-      services/
-      jobs/
-      config/
-    .env.example
-    server.js
-  frontend/
-    src/
-      pages/
-      components/
-      context/
-      api/
-  render.yaml
-  README.md
-  SYSTEM_DESIGN.md
+├── backend/
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── jobs/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── seed/
+│   │   └── services/
+│   ├── .env.example
+│   ├── package.json
+│   ├── package-lock.json
+│   └── server.js
+├── frontend/
+│   ├── src/
+│   ├── .env.example
+│   ├── package.json
+│   ├── package-lock.json
+│   └── vite.config.js
+├── .gitignore
+├── README.md
+├── package.json
+├── render.yaml
+└── SYSTEM_DESIGN.md
 ```
 
-## Quick Start
-
-### 1) Backend setup
-```bash
-cd backend
-npm install
-cp .env.example .env
-npm start
-```
-
-### 2) Frontend setup
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
-```
+## Installation
+1. Clone the repository.
+2. Install frontend dependencies:
+   ```bash
+   cd frontend
+   npm install
+   ```
+3. Install backend dependencies:
+   ```bash
+   cd ../backend
+   npm install
+   ```
+4. Configure environment variables using the provided `.env.example` files.
+5. Start the backend:
+   ```bash
+   cd backend
+   npm start
+   ```
+6. Start the frontend:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
 
 ## Environment Variables
-See `backend/.env.example` and `frontend/.env.example`.
+Create local `.env` files from the examples and define only the required values.
 
-Required backend values:
-- `PORT`
-- `MONGO_URI`
-- `JWT_SECRET`
-- `OPENAI_API_KEY`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REFRESH_TOKEN`
-
-Required frontend value:
-- `VITE_API_URL`
-
-## Database Schema
-- User: id, name, email, password, role, phone, createdAt
-- Doctor: userId, specialization, workingHours, slotDuration, leaveDays[], bio
-- Patient: userId, dateOfBirth, bloodGroup, allergies, medicalHistory
-- Appointment: doctorId, patientId, date, slotTime, status, symptomSummary, preVisitSummary, postVisitSummary, doctorNotes, prescription, holdUntil, googleEventId
-- Prescription: appointmentId, patientId, medicationName, dosage, frequency, duration, notes
-- Notification: userId, appointmentId, type, status, retryCount, payload, sentAt
-
-## API Route List
-
-### Auth
-- POST `/api/auth/register` — body: `{ name, email, password, phone, role }`
-- POST `/api/auth/login` — body: `{ email, password }`
-- GET `/api/auth/me` — requires JWT
-
-### Admin
-- GET `/api/admin/doctors`
-- POST `/api/admin/doctors` — body with doctor details and user details
-- PUT `/api/admin/doctors/:id`
-- DELETE `/api/admin/doctors/:id`
-- POST `/api/admin/doctors/:id/leave` — body: `{ date }`
-
-### Patient/Booking
-- GET `/api/appointments/doctors`
-- GET `/api/appointments/doctors/:id/slots?date=2026-08-25`
-- POST `/api/appointments/book` — body: `{ doctorId, date, slotTime }`
-- POST `/api/appointments/hold` — body: `{ doctorId, date, slotTime }`
-- POST `/api/appointments/symptoms` — body: `{ appointmentId, symptoms }`
-- GET `/api/appointments/me`
-
-### Doctor
-- GET `/api/doctors/profile`
-- PUT `/api/doctors/profile`
-- GET `/api/appointments/doctor`
-- POST `/api/appointments/summary` — body: `{ appointmentId, notes, prescription }`
-
-## LLM Prompts (exact)
-Pre-visit:
-```text
-Analyse these symptoms and return: urgency level (Low / Medium / High), chief complaint, and three suggested questions for the doctor. Symptoms: <symptoms>
+### Backend
+```env
+MONGO_URI=
+JWT_SECRET=
+OPENAI_API_KEY=
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
 ```
 
-Post-visit:
-```text
-Convert these clinical notes into a patient-friendly summary with medication schedule and follow-up steps: <notes>
+### Frontend
+```env
+VITE_API_URL=
 ```
 
-The LLM service attempts JSON responses and falls back to the message:
-`Summary unavailable — please review notes manually.`
+## Demo Accounts
+The following demo accounts are intentionally provided for local development and are already used in the project seed script:
 
-## Google Calendar OAuth Setup
-1. Go to Google Cloud Console.
-2. Create a new project and enable Google Calendar API.
-3. Create OAuth 2.0 client credentials.
-4. Add authorized redirect URI: `http://localhost:5000/oauth/google/callback` for local dev.
-5. Save the Client ID and Secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
-6. Generate refresh token and store it as `GOOGLE_REFRESH_TOKEN`.
-7. Ensure the account has calendar access enabled.
+- Patient: `patient.demo@example.com` / `Patient@123`
+- Doctor: `doctor.demo@example.com` / `Doctor@123`
+- Admin: `admin.demo@example.com` / `Admin@123`
 
-## SMTP / Email Setup
-Use Gmail SMTP with App Password or Mailtrap in development:
-- SMTP Host: `smtp.gmail.com`
-- Port: `587`
-- User: Gmail email address
-- Pass: App password for Gmail
+## Main Application Flow
+Patient
+→ Find Doctor
+→ Select Date
+→ Select Time Slot
+→ Book Appointment
+→ Submit Symptoms
+→ Doctor Consultation
+→ Visit Summary
 
-## Deployment
-### Render (backend)
-- Connect repo to Render.
-- Set build command: `cd backend && npm install`
-- Set start command: `cd backend && npm start`
-- Add all backend env vars from `.env.example`
+## Testing
+The appointment flow was verified for:
+- appointment creation
+- slot availability
+- double-booking prevention
+- cancellation
+- frontend production build
 
-### Vercel (frontend)
-- Import the repo into Vercel.
-- Set project root to `frontend`.
-- Add `VITE_API_URL` pointing to the deployed backend URL.
-- Deploy.
-
-This project includes a `render.yaml` file for one-click Render deployment scaffolding.
-
-## Notes
-- Booking uses a unique Mongo compound index and a rapid slot hold to reduce double-booking risk.
-- If the LLM is unavailable, booking and note submission still continue.
-- Background jobs send reminders and retry failed emails.
+## Future Improvements
+- production Google Calendar configuration
+- email notifications
+- deployment
+- automated testing

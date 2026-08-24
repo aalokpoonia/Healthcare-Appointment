@@ -1,6 +1,9 @@
 const OpenAI = require('openai');
 
-const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+const client = process.env.OPENAI_API_KEY ? new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+}) : null;
 
 async function askLLM(prompt, type = 'general') {
   if (!client) {
@@ -13,7 +16,7 @@ async function askLLM(prompt, type = 'general') {
 
   try {
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gemini-2.0-flash',
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [

@@ -5,7 +5,7 @@ const Doctor = require('../models/Doctor');
 const { queueNotification } = require('../services/notificationService');
 
 function startReminderJob() {
-  cron.schedule('*/5 * * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     try {
       const appointments = await Appointment.find({ status: 'booked' });
       for (const appointment of appointments) {
@@ -30,7 +30,7 @@ function startReminderJob() {
     } catch (error) {
       console.error('Reminder job error:', error.message);
     }
-  });
+  }, { noOverlap: true });
 
   console.log('Reminder job started');
 }
