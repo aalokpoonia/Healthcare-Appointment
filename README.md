@@ -1,7 +1,10 @@
 # Healthcare Appointment Management System
 
 ## About the Project
-This project is a MERN-based healthcare appointment management system designed for role-based patient care and clinic operations. Patients can find doctors, view doctor availability, book appointments, submit pre-visit symptoms, and review consultation summaries. Doctors can manage appointments and consultation records, while admins can manage doctors, patients, and appointment records.
+This project is a MERN-based healthcare appointment management system developed as an academic and full-stack project. It supports the core healthcare workflow for three user roles: Patient, Doctor, and Admin.
+
+The main patient journey is:
+Patient → Find Doctor → View Availability → Select Date → Select Time Slot → Book Appointment → Submit Symptoms → Doctor Consultation → Visit Summary
 
 ## Features
 - JWT authentication
@@ -39,7 +42,6 @@ This project is a MERN-based healthcare appointment management system designed f
 
 ### Additional Technologies
 - Google Calendar API (optional integration)
-- OpenAI API (for symptom and summary processing)
 - Nodemailer
 - node-cron
 
@@ -70,7 +72,9 @@ Healthcare Appointment/
 ├── README.md
 ├── package.json
 ├── render.yaml
-└── SYSTEM_DESIGN.md
+├── screenshots/
+├── SYSTEM_DESIGN.md
+└── package-lock.json
 ```
 
 ## Installation
@@ -85,7 +89,7 @@ Healthcare Appointment/
    cd ../backend
    npm install
    ```
-4. Configure environment variables using the provided `.env.example` files.
+4. Create local `.env` files from the example files and set the required environment variables.
 5. Start the backend:
    ```bash
    cd backend
@@ -98,38 +102,36 @@ Healthcare Appointment/
    ```
 
 ## Environment Variables
-Create local `.env` files from the examples and define only the required values.
+The project expects the following environment variables to be defined locally in `.env` files. Do not commit these files.
 
 ### Backend
-```env
-MONGO_URI=
-JWT_SECRET=
-OPENAI_API_KEY=
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REFRESH_TOKEN=
-```
+- `PORT`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REFRESH_TOKEN`
 
 ### Frontend
-```env
-VITE_API_URL=
-```
+- `VITE_API_URL`
 
 ## Demo Accounts
-The following demo accounts are intentionally provided for local development and are already used in the project seed script:
+The following demo accounts are intentionally included for local testing and are used by the seeded development data:
 
-- Patient: `patient.demo@example.com` / `Patient@123`
-- Doctor: `doctor.demo@example.com` / `Doctor@123`
-- Admin: `admin.demo@example.com` / `Admin@123`
+- Patient: patient.demo@example.com / Patient@123
+- Doctor: doctor.demo@example.com / Doctor@123
+- Admin: admin.demo@example.com / Admin@123
 
 ## Main Application Flow
 Patient
 → Find Doctor
+→ View Availability
 → Select Date
 → Select Time Slot
 → Book Appointment
@@ -137,16 +139,22 @@ Patient
 → Doctor Consultation
 → Visit Summary
 
+## Screenshots
+Screenshots will be added here as the project documentation is expanded.
+
 ## Testing
-The appointment flow was verified for:
+The following project behaviors were verified:
 - appointment creation
-- slot availability
+- doctor time-slot availability
 - double-booking prevention
-- cancellation
+- appointment cancellation
 - frontend production build
 
 ## Future Improvements
 - production Google Calendar configuration
 - email notifications
 - deployment
-- automated testing
+- automated tests
+
+## Project Status
+Academic project — MERN-based Healthcare Appointment Management System.
