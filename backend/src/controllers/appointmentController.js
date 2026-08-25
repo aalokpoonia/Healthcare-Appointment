@@ -1,6 +1,7 @@
 const Doctor = require('../models/Doctor');
 const User = require('../models/User');
 const Appointment = require('../models/Appointment');
+const Prescription = require('../models/Prescription');
 const { generateDoctorSlots } = require('../services/slotService');
 const { askLLM } = require('../services/llmService');
 const { queueNotification } = require('../services/notificationService');
@@ -250,7 +251,7 @@ const doctorAppointments = async (req, res, next) => {
 
 const submitClinicalSummary = async (req, res, next) => {
   try {
-    const { appointmentId, diagnosis, clinicalNotes, prescription, followUpDate, recommendations } = req.body;
+    const { appointmentId, diagnosis, clinicalNotes, prescription, prescriptionFrequency, followUpDate, recommendations } = req.body;
     const appointment = await Appointment.findById(appointmentId);
     if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
 
@@ -267,12 +268,35 @@ const submitClinicalSummary = async (req, res, next) => {
     appointment.diagnosis = diagnosis || '';
     appointment.clinicalNotes = clinicalNotes || '';
     appointment.prescription = prescription || '';
+    appointment.prescriptionFrequency = prescriptionFrequency || appointment.prescriptionFrequency || '';
     appointment.followUpDate = followUpDate || '';
     appointment.recommendations = recommendations || '';
     appointment.doctorNotes = clinicalNotes || '';
     appointment.postVisitSummary = summaryResult.fallback ? 'Summary unavailable — please review notes manually.' : JSON.stringify(summaryResult.data);
     appointment.status = 'completed';
+    appointment.nextMedicationReminderAt = appointment.prescriptionFrequency ? new Date(Date.now() + 30 * 60 * 1000) : null;
     await appointment.save();
+
+    if (appointment.prescription) {
+      const medicationName = String(appointment.prescription).split(/\r?\n|;|,|\./)[0]?.trim() || 'Medication';
+      const medicationRecord = await Prescription.findOne({ appointmentId: appointment._id });
+      const prescriptionPayload = {
+        appointmentId: appointment._id,
+        patientId: appointment.patientId,
+        medicationName,
+        dosage: appointment.prescription.includes(' - ') ? appointment.prescription.split(' - ')[1]?.trim() || 'As directed' : 'As directed',
+        frequency: appointment.prescriptionFrequency || 'once daily',
+        duration: appointment.followUpDate ? `Until ${appointment.followUpDate}` : '7 days',
+        notes: appointment.recommendations || appointment.clinicalNotes || '',
+      };
+
+      if (medicationRecord) {
+        Object.assign(medicationRecord, prescriptionPayload);
+        await medicationRecord.save();
+      } else {
+        await Prescription.create(prescriptionPayload);
+      }
+    }
 
     res.json({ appointment });
   } catch (error) {

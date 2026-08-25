@@ -22,7 +22,7 @@ export default function AppointmentDetailPage() {
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ diagnosis: '', clinicalNotes: '', prescription: '', followUpDate: '' });
+  const [form, setForm] = useState({ diagnosis: '', clinicalNotes: '', prescription: '', prescriptionFrequency: 'once daily', followUpDate: '' });
   const [submitMessage, setSubmitMessage] = useState('');
 
   const fetchAppointment = async () => {
@@ -136,6 +136,14 @@ export default function AppointmentDetailPage() {
               <label className="block md:col-span-2">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Prescription</span>
                 <textarea value={form.prescription} onChange={(e) => setForm({ ...form, prescription: e.target.value })} rows={3} className="w-full rounded border border-slate-300 p-2.5" />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">Medication frequency</span>
+                <select value={form.prescriptionFrequency} onChange={(e) => setForm({ ...form, prescriptionFrequency: e.target.value })} className="w-full rounded border border-slate-300 p-2.5">
+                  <option value="once daily">Once daily</option>
+                  <option value="twice daily">Twice daily</option>
+                  <option value="three times daily">Three times daily</option>
+                </select>
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Follow-up date</span>

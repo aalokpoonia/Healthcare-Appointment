@@ -6,7 +6,7 @@ const notificationSchema = new mongoose.Schema(
     appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment', default: null },
     type: {
       type: String,
-      enum: ['booking_confirmation', 'reminder', 'cancellation', 'follow_up', 'system'],
+      enum: ['booking_confirmation', 'reminder', 'medication_reminder', 'cancellation', 'follow_up', 'system'],
       required: true,
     },
     status: {
